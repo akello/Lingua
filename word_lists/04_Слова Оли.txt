@@ -1,0 +1,43 @@
+# Слова Оли (из Quizlet: https://quizlet.com/_jyjhqg)
+# Одна строка — одна пара: английское — русское
+high — высокий
+go — идти
+big — большой
+fast — быстрый
+last — последний
+low — низкий
+stop — стоп
+slow — медленный
+small — маленький
+goodbye — до свидания
+hello — привет
+dummy — пустышка
+ice cream — мороженое
+jacket — куртка
+juice — сок
+orange — апельсин
+sandwich — бутерброд
+towel — полотенце
+want — хотеть
+cold — холодный
+hot — горячий
+hungry — голодный
+thirsty — испытывающий жажду
+tired — уставший
+wet — мокрый
+a number — число
+are — быть
+frown — хмуриться
+is — быть
+jump — прыгать
+run — бежать
+smile — улыбаться
+thank — благодарить
+walk — гулять
+can — мочь, уметь
+fine — хороший
+upside down — вверх ногами
+you — ты, вы
+and — и
+hi — привет
+thank you — спасибо

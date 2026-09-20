@@ -1,0 +1,14 @@
+# Lingaphone Children's English, Topic Book 1 (pp. 11-12), "Food Song"
+# Только слова, отмеченные звёздочкой. Одна строка — одна пара: английское — русское
+a banana — банан
+a biscuit — печенье
+bread — хлеб
+a cake — пирожное, торт
+cheese — сыр
+chocolate — шоколад
+food — еда
+fruit — фрукты
+meat — мясо
+rice — рис
+sweets — конфеты
+a tomato — помидор
