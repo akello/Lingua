@@ -4,6 +4,10 @@ import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONObject
+import java.time.LocalDate
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 /** Достижения ребёнка. */
 data class Progress(
@@ -26,16 +30,57 @@ class ProgressRepository(context: Context) {
 
     private val prefs = context.getSharedPreferences("progress", Context.MODE_PRIVATE)
 
-    private val _progress = MutableStateFlow(read())
+    private val _progress = MutableStateFlow(Progress())
     val progress: StateFlow<Progress> = _progress.asStateFlow()
 
     /** Новое звание, которое ещё не показали ребёнку (для праздничного экрана). */
     private val _levelUp = MutableStateFlow<Rank?>(null)
     val levelUp: StateFlow<Rank?> = _levelUp.asStateFlow()
 
+    init {
+        // При смене правил начисления прогресс начинается заново: старые звёзды
+        // зарабатывались по другой шкале, и сравнивать их с новой было бы нечестно.
+        if (prefs.getInt(KEY_VERSION, 0) < DATA_VERSION) {
+            prefs.edit().clear().putInt(KEY_VERSION, DATA_VERSION).apply()
+        }
+        _progress.value = read()
+    }
+
+    // ---------- Раунды и множители ----------
+
+    /**
+     * Сообщаем, что начался раунд по списку listId, и получаем множитель звёзд для него.
+     * Первый за день раунд списка даёт звёзды полностью, повторы — меньше.
+     */
+    fun startRound(listId: String): Float {
+        val counts = roundsToday()
+        val played = counts.optInt(listId, 0)
+        counts.put(listId, played + 1)
+        prefs.edit()
+            .putString(KEY_ROUNDS_DATE, today())
+            .putString(KEY_ROUNDS_COUNTS, counts.toString())
+            .apply()
+        return Scoring.multiplierForRound(played)
+    }
+
+    private fun roundsToday(): JSONObject {
+        if (prefs.getString(KEY_ROUNDS_DATE, null) != today()) return JSONObject()
+        val saved = prefs.getString(KEY_ROUNDS_COUNTS, null) ?: return JSONObject()
+        return try {
+            JSONObject(saved)
+        } catch (e: Exception) {
+            JSONObject()
+        }
+    }
+
+    private fun today(): String = LocalDate.now().toString()
+
+    // ---------- Начисление ----------
+
     /** Правильная пара. streak — сколько правильных подряд, включая эту. Возвращает, сколько звёзд добавили. */
-    fun addCorrect(streak: Int): Int {
-        val delta = Scoring.CORRECT + if (streak >= Scoring.STREAK_FROM) Scoring.STREAK_BONUS else 0
+    fun addCorrect(streak: Int, multiplier: Float): Int {
+        val base = Scoring.CORRECT + if (streak >= Scoring.STREAK_FROM) Scoring.STREAK_BONUS else 0
+        val delta = max(1, (base * multiplier).roundToInt())
         update {
             it.copy(
                 stars = it.stars + delta,
@@ -55,8 +100,8 @@ class ProgressRepository(context: Context) {
     }
 
     /** Раунд пройден. Возвращает бонус (0, если были ошибки). */
-    fun completeRound(perfect: Boolean): Int {
-        val bonus = if (perfect) Scoring.PERFECT_ROUND_BONUS else 0
+    fun completeRound(perfect: Boolean, multiplier: Float): Int {
+        val bonus = if (perfect) max(1, (Scoring.PERFECT_ROUND_BONUS * multiplier).roundToInt()) else 0
         update {
             it.copy(
                 stars = it.stars + bonus,
@@ -72,7 +117,7 @@ class ProgressRepository(context: Context) {
     }
 
     fun reset() {
-        prefs.edit().clear().apply()
+        prefs.edit().clear().putInt(KEY_VERSION, DATA_VERSION).apply()
         _progress.value = Progress()
         _levelUp.value = null
     }
@@ -111,6 +156,10 @@ class ProgressRepository(context: Context) {
     }
 
     private companion object {
+        /** Поднимите это число, если снова меняете шкалу: прогресс обнулится один раз. */
+        const val DATA_VERSION = 2
+
+        const val KEY_VERSION = "data_version"
         const val KEY_STARS = "stars"
         const val KEY_RANK = "rank"
         const val KEY_CORRECT = "total_correct"
@@ -118,5 +167,7 @@ class ProgressRepository(context: Context) {
         const val KEY_ROUNDS = "rounds"
         const val KEY_PERFECT = "perfect_rounds"
         const val KEY_STREAK = "best_streak"
+        const val KEY_ROUNDS_DATE = "rounds_date"
+        const val KEY_ROUNDS_COUNTS = "rounds_counts"
     }
 }

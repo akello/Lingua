@@ -7,8 +7,8 @@ plugins {
 }
 
 // Версия приложения. Поднимайте перед каждым обновлением: versionCode — на 1, versionName — как удобно.
-val appVersionCode = 5
-val appVersionName = "0.5"
+val appVersionCode = 6
+val appVersionName = "0.6"
 
 // Имя готовых файлов: lingua-0.5-release.apk и lingua-0.5-debug.apk
 base {

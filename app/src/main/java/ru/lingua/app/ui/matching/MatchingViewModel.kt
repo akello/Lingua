@@ -43,6 +43,7 @@ data class MatchingUiState(
     val mistakes: Int = 0,                         // ошибок в этом раунде
     val streak: Int = 0,                           // правильных ответов подряд
     val roundBonus: Int = 0,                       // бонус за раунд без ошибок
+    val starMultiplier: Float = 1f,                // множитель звёзд: повторы списка за день дают меньше
     val scoreEvent: ScoreEvent? = null,
 ) {
     val isRoundComplete: Boolean
@@ -116,10 +117,14 @@ class MatchingViewModel(
         }
         postponed.asReversed().forEach { queue.addFirst(it) }
 
+        // Повторный раунд по этому же списку за сегодня даёт меньше звёзд
+        val multiplier = progressRepository.startRound(list.id)
+
         _state.update {
             MatchingUiState(
                 isLoading = false,
                 round = it.round + 1,
+                starMultiplier = multiplier,
                 source = it.source,
                 skippedLines = it.skippedLines,
                 streak = it.streak,                // серия продолжается в следующем раунде
@@ -163,7 +168,7 @@ class MatchingViewModel(
     private fun onCorrect(s: MatchingUiState, pairId: Int) {
         say(s, pairId)
         val streak = s.streak + 1
-        val delta = progressRepository.addCorrect(streak)
+        val delta = progressRepository.addCorrect(streak, s.starMultiplier)
         val text = if (streak >= 3) "+$delta 🔥$streak" else "+$delta"
 
         var newState = s.copy(
@@ -174,7 +179,7 @@ class MatchingViewModel(
             scoreEvent = ScoreEvent(++eventCounter, text, positive = true),
         )
         if (newState.isRoundComplete) {
-            val bonus = progressRepository.completeRound(perfect = newState.mistakes == 0)
+            val bonus = progressRepository.completeRound(perfect = newState.mistakes == 0, multiplier = s.starMultiplier)
             newState = newState.copy(roundBonus = bonus)
         }
         _state.value = newState

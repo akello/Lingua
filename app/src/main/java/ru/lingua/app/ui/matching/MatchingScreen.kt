@@ -163,6 +163,9 @@ private fun MatchingBoard(
         if (showSpeechWarning) {
             InfoBanner("Английский голос не найден. Включите его в настройках Android: Специальные возможности → Синтез речи.")
         }
+        if (state.starMultiplier < 1f) {
+            InfoBanner("Этот список сегодня уже был: звёзды за раунд ×${state.starMultiplier}. Попробуй другой список или вернись завтра.")
+        }
         if (state.skippedLines > 0) {
             InfoBanner("Не удалось разобрать строк в файле: ${state.skippedLines}")
         }
