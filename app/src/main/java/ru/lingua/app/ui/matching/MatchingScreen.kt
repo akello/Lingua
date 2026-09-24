@@ -79,7 +79,15 @@ fun MatchingScreen(viewModel: MatchingViewModel, onBack: () -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text(viewModel.list.title) },
+                    title = {
+                        Column {
+                            Text(viewModel.list.title)
+                            Text(
+                                text = "${viewModel.mode.emoji} ${viewModel.mode.title}",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                     navigationIcon = {
                         IconButton(onClick = onBack) {
@@ -111,7 +119,8 @@ fun MatchingScreen(viewModel: MatchingViewModel, onBack: () -> Unit) {
                     else -> MatchingBoard(
                         state = state,
                         stars = progress.stars,
-                        showSpeechWarning = soundEnabled && speechReady == false,
+                        mode = viewModel.mode,
+                        showSpeechWarning = (soundEnabled || viewModel.mode == ExerciseMode.Listening) && speechReady == false,
                         onLeftClick = viewModel::onLeftClick,
                         onRightClick = viewModel::onRightClick,
                         onNextRound = viewModel::nextRound,
@@ -126,6 +135,7 @@ fun MatchingScreen(viewModel: MatchingViewModel, onBack: () -> Unit) {
 private fun MatchingBoard(
     state: MatchingUiState,
     stars: Int,
+    mode: ExerciseMode,
     showSpeechWarning: Boolean,
     onLeftClick: (Int) -> Unit,
     onRightClick: (Int) -> Unit,
@@ -192,6 +202,8 @@ private fun MatchingBoard(
                 wrong = state.wrongRight,
                 matched = state.matched,
                 onClick = onRightClick,
+                // В режиме «Слушай и выбирай» английское слово прячем до верного ответа
+                hideUntilMatched = mode == ExerciseMode.Listening,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -228,6 +240,7 @@ private fun WordColumn(
     matched: Set<Int>,
     onClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    hideUntilMatched: Boolean = false,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         cards.forEach { card ->
@@ -237,7 +250,13 @@ private fun WordColumn(
                 selected -> CardStatus.Selected
                 else -> CardStatus.Normal
             }
-            WordCardView(text = card.text, status = status, onClick = { onClick(card.pairId) })
+            val hidden = hideUntilMatched && card.pairId !in matched
+            WordCardView(
+                text = if (hidden) "🔊" else card.text,
+                status = status,
+                hidden = hidden,
+                onClick = { onClick(card.pairId) },
+            )
         }
     }
 }
@@ -246,7 +265,7 @@ private enum class CardStatus { Normal, Selected, Matched, Wrong }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun WordCardView(text: String, status: CardStatus, onClick: () -> Unit) {
+private fun WordCardView(text: String, status: CardStatus, onClick: () -> Unit, hidden: Boolean = false) {
     val colors = MaterialTheme.colorScheme
     val correct = if (isSystemInDarkTheme()) CorrectDark else CorrectLight
 
@@ -296,7 +315,7 @@ private fun WordCardView(text: String, status: CardStatus, onClick: () -> Unit) 
         Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
             Text(
                 text = text,
-                fontSize = 18.sp,
+                fontSize = if (hidden) 26.sp else 18.sp,
                 fontWeight = if (status == CardStatus.Selected) FontWeight.SemiBold else FontWeight.Normal,
                 textAlign = TextAlign.Center,
             )

@@ -60,6 +60,7 @@ class MatchingViewModel(
     private val settingsRepository: SettingsRepository,
     private val speaker: Speaker,
     val list: WordListInfo,                        // какой список слов тренируем
+    val mode: ExerciseMode,                        // как тренируем
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(MatchingUiState())
@@ -118,7 +119,7 @@ class MatchingViewModel(
         postponed.asReversed().forEach { queue.addFirst(it) }
 
         // Повторный раунд по этому же списку за сегодня даёт меньше звёзд
-        val multiplier = progressRepository.startRound(list.id)
+        val multiplier = progressRepository.startRound("${list.id}#${mode.name}")
 
         _state.update {
             MatchingUiState(
@@ -145,8 +146,12 @@ class MatchingViewModel(
         if (s.wrongLeft != null) return
         // По угаданной паре можно нажать ещё раз, чтобы услышать слово снова
         if (pairId in s.matched) {
-            say(s, pairId)
+            say(s, pairId, force = mode == ExerciseMode.Listening)
             return
+        }
+        // В режиме «Слушай и выбирай» нажатие на скрытую карточку произносит слово
+        if (!isLeft && mode == ExerciseMode.Listening) {
+            say(s, pairId, force = true)
         }
 
         val newState = if (isLeft) {
@@ -186,8 +191,8 @@ class MatchingViewModel(
     }
 
     /** Произносит английское слово этой пары, если озвучка включена. */
-    private fun say(s: MatchingUiState, pairId: Int) {
-        if (!soundEnabled.value) return
+    private fun say(s: MatchingUiState, pairId: Int, force: Boolean = false) {
+        if (!force && !soundEnabled.value) return
         val word = s.rightCards.find { it.pairId == pairId }?.text ?: return
         speaker.speak(word)
     }

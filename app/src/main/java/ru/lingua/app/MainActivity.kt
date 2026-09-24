@@ -17,6 +17,7 @@ import ru.lingua.app.ui.game.LevelUpDialog
 import ru.lingua.app.ui.lists.ListsScreen
 import ru.lingua.app.ui.lists.ListsViewModel
 import ru.lingua.app.ui.matching.MatchingScreen
+import ru.lingua.app.ui.matching.ExerciseMode
 import ru.lingua.app.ui.matching.MatchingViewModel
 import ru.lingua.app.ui.theme.LinguaTheme
 
@@ -48,24 +49,30 @@ private fun LinguaNavigation() {
 
     // id открытого списка (имя файла). rememberSaveable — чтобы пережить поворот экрана.
     var openedListId by rememberSaveable { mutableStateOf<String?>(null) }
+    var openedModeName by rememberSaveable { mutableStateOf(ExerciseMode.Matching.name) }
     val openedList = listsState.lists.find { it.id == openedListId }
+    val openedMode = ExerciseMode.valueOf(openedModeName)
 
     if (openedList == null) {
         ListsScreen(
             viewModel = listsViewModel,
             progress = progress,
             onResetProgress = progressRepository::reset,
-            onListClick = { openedListId = it.id },
+            onListClick = { list, mode ->
+                openedModeName = mode.name
+                openedListId = list.id
+            },
         )
     } else {
         // У каждого списка своя ViewModel (key), поэтому прогресс в разных списках не смешивается
-        val matchingViewModel = viewModel(key = "matching:${openedList.id}") {
+        val matchingViewModel = viewModel(key = "exercise:$openedModeName:${openedList.id}") {
             MatchingViewModel(
                 repository,
                 progressRepository,
                 app.settingsRepository,
                 app.speaker,
                 openedList,
+                openedMode,
             )
         }
         BackHandler { openedListId = null } // системная кнопка «Назад»
